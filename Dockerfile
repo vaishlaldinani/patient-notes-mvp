@@ -19,7 +19,7 @@ WORKDIR /app
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY backend /app
+COPY backend /app/backend
 ENV DATA_DIR=/app/data
 ENV UPLOAD_DIR=/app/data/uploads
 
