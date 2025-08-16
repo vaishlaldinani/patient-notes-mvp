@@ -1,0 +1,12 @@
+services:
+  api:
+    container_name: patient-notes-mvp
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    environment:
+      - DATA_DIR=/app/data
+      - UPLOAD_DIR=/app/data/uploads

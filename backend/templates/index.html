@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Lief Patient Notes (MVP)</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+</head>
+<body>
+  <header>
+    <h1>Patient Case Notes</h1>
+    <p>Demo: create manual notes or upload scans for OCR.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Manual Note</h2>
+      <form id="manual-form">
+        <label>Patient ID <input name="patient_id" required/></label>
+        <label>Author ID <input name="author_id" required/></label>
+        <label>Tags (comma-separated) <input name="tags"/></label>
+        <label>Text
+          <textarea name="text" rows="5" required placeholder="Enter case notes..."></textarea>
+        </label>
+        <button type="submit">Save Manual Note</button>
+      </form>
+      <pre id="manual-result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Upload Scan (PDF/Image)</h2>
+      <form id="upload-form" enctype="multipart/form-data">
+        <label>Patient ID <input name="patient_id" required/></label>
+        <label>Author ID <input name="author_id" required/></label>
+        <label>Tags (comma-separated) <input name="tags"/></label>
+        <label>File <input type="file" name="file" accept=".pdf,image/*" required/></label>
+        <button type="submit">Upload & OCR</button>
+      </form>
+      <pre id="upload-result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Find Notes</h2>
+      <form id="search-form">
+        <label>Patient ID <input name="patient_id"/></label>
+        <label>Source Type
+          <select name="source_type">
+            <option value="">(any)</option>
+            <option>manual</option>
+            <option>ocr</option>
+          </select>
+        </label>
+        <label>Query <input name="q" placeholder="search text/tags"/></label>
+        <button type="submit">Search</button>
+      </form>
+      <ul id="notes-list"></ul>
+    </section>
+  </main>
+
+<script>
+async function postJSON(url, data) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+document.getElementById('manual-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  data.tags = (data.tags || '').split(',').map(s => s.trim()).filter(Boolean);
+  try {
+    const json = await postJSON('/notes', data);
+    document.getElementById('manual-result').textContent = JSON.stringify(json, null, 2);
+  } catch (err) {
+    document.getElementById('manual-result').textContent = err;
+  }
+});
+
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    const res = await fetch('/notes/upload', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(json));
+    document.getElementById('upload-result').textContent = JSON.stringify(json, null, 2);
+  } catch (err) {
+    document.getElementById('upload-result').textContent = err;
+  }
+});
+
+document.getElementById('search-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const qs = new URLSearchParams(Object.fromEntries(fd.entries()));
+  const res = await fetch('/notes?' + qs.toString());
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  if (res.ok) {
+    const arr = await res.json();
+    for (const n of arr) {
+      const li = document.createElement('li');
+      const fileLink = n.file_path ? `<a href="/files/${n.id}" target="_blank">original</a>` : '';
+      li.innerHTML = `<strong>#${n.id}</strong> [${n.source_type}] patient=${n.patient_id} <em>tags: ${n.tags.join(', ')}</em><br/>
+        <small>confidence: ${n.ocr_confidence ?? ''}</small><br/>
+        <pre>${(n.text || '').slice(0, 600)}</pre>
+        ${fileLink}`;
+      list.appendChild(li);
+    }
+  } else {
+    list.textContent = 'Search failed';
+  }
+});
+</script>
+</body>
+</html>

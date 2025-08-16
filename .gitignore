@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+
+# Data directory (uploads + sqlite db)
+data/
+
+# Environment files
+.env
+.env.*
+
+# VS Code / IDE files
+.vscode/
+.idea/
+*.swp
+
+# Docker logs
+*.log
